@@ -60,22 +60,6 @@ export const useTronLink = () => {
           // Fetch and log balance
           await fetchBalanceAndLogInfo(address);
 
-          // Register with backend to map Telegram ID to Tron Address
-          const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
-          if (telegramId) {
-            try {
-              // Note: using the same host that serves the API. If deployed separately, this needs the backend URL.
-              // For now we assume the backend URL is passed as env var, or defaults to VITE_API_URL
-              const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-              await fetch(`${apiUrl}/api/connect-wallet`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ telegramId, tronAddress: address })
-              });
-            } catch (err) {
-              console.error('Failed to link wallet to Telegram ID:', err);
-            }
-          }
         } else {
           setIsConnected(false);
         }

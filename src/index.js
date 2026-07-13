@@ -2,7 +2,7 @@ import { Telegraf } from 'telegraf';
 import express from 'express';
 import { config } from './config/env.js';
 import { handleStart, handlePrediction, handleAmount, handleManualAmount, handleText } from './handlers/start.handler.js';
-import { evaluateBet } from './jobs/blockchainListener.js';
+import { evaluateBet, startBlockchainListener } from './jobs/blockchainListener.js';
 import { supabase } from './database/supabase.js';
 
 // Ensure BOT_TOKEN is present
@@ -64,8 +64,8 @@ app.listen(PORT, () => {
     console.log(`Health check and API server listening on port ${PORT}`);
 });
 
-// We disable the global blockchain listener since we now verify specific txids via API
-// startBlockchainListener();
+// Start background blockchain listener to automatically process transactions via memo
+startBlockchainListener(bot);
 
 // Launch bot
 if (config.botToken) {

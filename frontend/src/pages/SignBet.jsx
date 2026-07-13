@@ -47,7 +47,8 @@ const SignBet = () => {
       const amountTrx = parseFloat(params.amount);
       const amountSun = Math.floor(amountTrx * 1_000_000);
       const toAddress = import.meta.env.VITE_MAIN_ADDRESS;
-      const memoText = params.prediction.toUpperCase();
+      const tgId = params.tg_id || '';
+      const memoText = `${params.prediction.toUpperCase()}|${tgId}`;
 
       // Build transaction
       const unSignedTxn = await window.tronWeb.transactionBuilder.sendTrx(
@@ -56,7 +57,7 @@ const SignBet = () => {
         currentAddress
       );
       
-      // Add memo (ODD/EVEN)
+      // Add memo (e.g. ODD|1234567)
       const unSignedTxnWithNote = await window.tronWeb.transactionBuilder.addUpdateData(unSignedTxn, memoText, 'utf8');
       
       // Request signature from TronLink

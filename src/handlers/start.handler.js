@@ -53,17 +53,18 @@ export const handleAmount = async (ctx) => {
             const urlObj = new URL(process.env.WEB_APP_URL || 'https://tronflip-demo.vercel.app');
             urlObj.searchParams.set('prediction', prediction);
             urlObj.searchParams.set('amount', amount);
+            urlObj.searchParams.set('tg_id', ctx.from.id);
             urlObj.searchParams.set('cb', Date.now()); // Cache buster
             webAppUrl = urlObj.toString();
         } catch(e) {
-            webAppUrl = `https://telegram-tron-betting-bot-5sen.vercel.app/?prediction=${prediction}&amount=${amount}&cb=${Date.now()}`;
+            webAppUrl = `https://telegram-tron-betting-bot-5sen.vercel.app/?prediction=${prediction}&amount=${amount}&tg_id=${ctx.from.id}&cb=${Date.now()}`;
         }
 
-        await ctx.editMessageText(`🎲 **Ready to bet!**\n\nPrediction: **${prediction}**\nAmount: **${amount} TRX**\n\nClick the button below to connect TronLink and sign the transaction.`, {
+        await ctx.editMessageText(`🎲 **Ready to bet!**\n\nPrediction: **${prediction}**\nAmount: **${amount} TRX**\n\nClick the button below to connect TronLink and sign the transaction in your browser.`, {
             parse_mode: 'Markdown',
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: "✍️ Sign Transaction", web_app: { url: webAppUrl } }]
+                    [{ text: "🌐 Open in Browser to Sign", url: webAppUrl }]
                 ]
             }
         });
@@ -107,17 +108,18 @@ export const handleText = async (ctx) => {
                 const urlObj = new URL(process.env.WEB_APP_URL || 'https://tronflip-demo.vercel.app');
                 urlObj.searchParams.set('prediction', prediction);
                 urlObj.searchParams.set('amount', amount);
+                urlObj.searchParams.set('tg_id', userId);
                 urlObj.searchParams.set('cb', Date.now()); // Cache buster
                 webAppUrl = urlObj.toString();
             } catch(e) {
-                webAppUrl = `https://telegram-tron-betting-bot-5sen.vercel.app/?prediction=${prediction}&amount=${amount}&cb=${Date.now()}`;
+                webAppUrl = `https://telegram-tron-betting-bot-5sen.vercel.app/?prediction=${prediction}&amount=${amount}&tg_id=${userId}&cb=${Date.now()}`;
             }
 
-            await ctx.reply(`🎲 **Ready to bet!**\n\nPrediction: **${prediction}**\nAmount: **${amount} TRX**\n\nClick the button below to connect TronLink and sign the transaction.`, {
+            await ctx.reply(`🎲 **Ready to bet!**\n\nPrediction: **${prediction}**\nAmount: **${amount} TRX**\n\nClick the button below to connect TronLink and sign the transaction in your browser.`, {
                 parse_mode: 'Markdown',
                 reply_markup: {
                     inline_keyboard: [
-                        [{ text: "✍️ Sign Transaction", web_app: { url: webAppUrl } }]
+                        [{ text: "🌐 Open in Browser to Sign", url: webAppUrl }]
                     ]
                 }
             });

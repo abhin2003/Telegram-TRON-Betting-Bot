@@ -3,7 +3,7 @@ import { useWallet } from '../context/WalletContext';
 
 const SignBet = () => {
   const { isConnected, walletAddress, connectWallet } = useWallet();
-  const [params, setParams] = useState({ prediction: '', amount: '' });
+  const [params, setParams] = useState({ prediction: '', amount: '', tg_id: '' });
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState(null);
 
@@ -12,8 +12,9 @@ const SignBet = () => {
     const searchParams = new URLSearchParams(window.location.search);
     const prediction = searchParams.get('prediction');
     const amount = searchParams.get('amount');
+    const tg_id = searchParams.get('tg_id');
     if (prediction && amount) {
-      setParams({ prediction, amount });
+      setParams({ prediction, amount, tg_id: tg_id || '' });
     } else {
       setError('Missing prediction or amount parameters in URL.');
     }
@@ -57,7 +58,7 @@ const SignBet = () => {
       setStatus('verifying');
 
       // Send to backend
-      const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || '';
+      const telegramId = params.tg_id || window.Telegram?.WebApp?.initDataUnsafe?.user?.id || '';
       const apiUrl = import.meta.env.VITE_API_URL || 'https://telegram-tron-betting-bot.loca.lt'; // update locally if needed
       
       try {
@@ -78,11 +79,11 @@ const SignBet = () => {
 
       setStatus('success');
       
-      // Auto-close Mini App
+      // Auto-close Window
       setTimeout(() => {
-        if (window.Telegram && window.Telegram.WebApp) {
-          window.Telegram.WebApp.close();
-        }
+        try {
+           window.close();
+        } catch(e) {}
       }, 2000);
 
     } catch (err) {

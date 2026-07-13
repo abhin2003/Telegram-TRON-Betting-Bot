@@ -48,9 +48,16 @@ export const handleAmount = async (ctx) => {
         const prediction = ctx.match[1];
         const amount = ctx.match[2];
         
-        const webAppUrlBase = process.env.WEB_APP_URL || 'https://tronflip-demo.vercel.app';
-        const baseUrl = webAppUrlBase.replace(/\/$/, '');
-        const webAppUrl = `${baseUrl}/?prediction=${prediction}&amount=${amount}`;
+        let webAppUrl;
+        try {
+            const urlObj = new URL(process.env.WEB_APP_URL || 'https://tronflip-demo.vercel.app');
+            urlObj.searchParams.set('prediction', prediction);
+            urlObj.searchParams.set('amount', amount);
+            urlObj.searchParams.set('cb', Date.now()); // Cache buster
+            webAppUrl = urlObj.toString();
+        } catch(e) {
+            webAppUrl = `https://telegram-tron-betting-bot-5sen.vercel.app/?prediction=${prediction}&amount=${amount}&cb=${Date.now()}`;
+        }
 
         await ctx.editMessageText(`🎲 **Ready to bet!**\n\nPrediction: **${prediction}**\nAmount: **${amount} TRX**\n\nClick the button below to connect TronLink and sign the transaction.`, {
             parse_mode: 'Markdown',
@@ -95,9 +102,16 @@ export const handleText = async (ctx) => {
             
             pendingManualAmounts.delete(userId);
             
-            const webAppUrlBase = process.env.WEB_APP_URL || 'https://tronflip-demo.vercel.app';
-            const baseUrl = webAppUrlBase.replace(/\/$/, '');
-            const webAppUrl = `${baseUrl}/?prediction=${prediction}&amount=${amount}`;
+            let webAppUrl;
+            try {
+                const urlObj = new URL(process.env.WEB_APP_URL || 'https://tronflip-demo.vercel.app');
+                urlObj.searchParams.set('prediction', prediction);
+                urlObj.searchParams.set('amount', amount);
+                urlObj.searchParams.set('cb', Date.now()); // Cache buster
+                webAppUrl = urlObj.toString();
+            } catch(e) {
+                webAppUrl = `https://telegram-tron-betting-bot-5sen.vercel.app/?prediction=${prediction}&amount=${amount}&cb=${Date.now()}`;
+            }
 
             await ctx.reply(`🎲 **Ready to bet!**\n\nPrediction: **${prediction}**\nAmount: **${amount} TRX**\n\nClick the button below to connect TronLink and sign the transaction.`, {
                 parse_mode: 'Markdown',

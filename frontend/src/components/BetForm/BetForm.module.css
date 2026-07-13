@@ -1,0 +1,332 @@
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  position: relative;
+  z-index: 2;
+}
+
+.assetSelector {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  background: #0a0a0a;
+  border: 2px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 5px;
+}
+
+.assetBtn {
+  flex: 1;
+  padding: 10px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #777;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.assetBtn:hover {
+  color: #fff;
+}
+
+.activeAsset {
+  background: linear-gradient(135deg, var(--primary-red) 0%, var(--dark-red) 100%);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(255, 6, 6, 0.3);
+}
+
+.cards {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.card {
+  flex: 1;
+  background-color: rgba(10, 10, 10, 0.8);
+  border: 2px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 30px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.cardOdd {
+  box-shadow: inset 0 0 0 transparent;
+}
+
+.cardEven {
+  box-shadow: inset 0 0 0 transparent;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: #555;
+}
+
+.card.selected {
+  transform: scale(1.05);
+  z-index: 2;
+}
+
+.cardOdd.selected {
+  border-color: var(--dark-red);
+  background-color: rgba(179, 0, 0, 0.1);
+  box-shadow: 0 0 20px rgba(179, 0, 0, 0.4), inset 0 0 20px rgba(179, 0, 0, 0.2);
+}
+
+.cardEven.selected {
+  border-color: var(--primary-red);
+  background-color: rgba(255, 6, 6, 0.1);
+  box-shadow: 0 0 20px rgba(255, 6, 6, 0.4), inset 0 0 20px rgba(255, 6, 6, 0.2);
+}
+
+.cardTitle {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+  transition: color 0.3s ease;
+}
+
+.cardSubtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.cardOdd .cardTitle {
+  color: #777;
+}
+
+.cardEven .cardTitle {
+  color: #777;
+}
+
+.cardOdd.selected .cardTitle {
+  color: var(--dark-red);
+  text-shadow: 0 0 10px rgba(179, 0, 0, 0.5);
+}
+
+.cardEven.selected .cardTitle {
+  color: var(--primary-red);
+  text-shadow: 0 0 10px rgba(255, 6, 6, 0.5);
+}
+
+.inputGroup {
+  margin-bottom: 40px;
+}
+
+.label {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  background-color: #0a0a0a;
+  border: 2px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 0 20px;
+  transition: all 0.3s ease;
+  height: 64px;
+}
+
+.inputIcon {
+  width: 24px;
+  height: 24px;
+  color: var(--primary-red);
+  margin-right: 12px;
+}
+
+.inputWrapper:focus-within {
+  border-color: var(--primary-red);
+  box-shadow: 0 0 15px rgba(255, 6, 6, 0.2);
+  background-color: #111;
+}
+
+.input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  outline: none;
+  height: 100%;
+}
+
+.input::placeholder {
+  color: #444;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.currency {
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+.validationError {
+  color: #FF4444;
+  font-size: 0.9rem;
+  margin-top: 10px;
+  font-weight: 500;
+}
+
+.payout {
+  margin-top: 16px;
+  font-size: 1rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.winAmount {
+  color: #00C851;
+  font-weight: 800;
+  font-size: 1.1rem;
+  text-shadow: 0 0 10px rgba(0, 200, 81, 0.3);
+}
+
+.placeBetBtn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--primary-red) 0%, var(--dark-red) 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 20px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 8px 20px rgba(255, 6, 6, 0.3);
+}
+
+.placeBetBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(255, 6, 6, 0.5);
+  background: linear-gradient(135deg, #ff1a1a 0%, #cc0000 100%);
+}
+
+.placeBetBtn:disabled {
+  background: #2a2a2a;
+  color: #555;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.errorMessage {
+  margin-top: 20px;
+  padding: 16px;
+  background-color: rgba(255, 68, 68, 0.1);
+  border: 1px solid #FF4444;
+  border-radius: 8px;
+  color: #FF4444;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.statusMessage {
+  margin-top: 20px;
+  padding: 16px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid #555;
+  border-radius: 8px;
+  color: #aaa;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.gameResultMessage {
+  margin-top: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(20, 20, 20, 0.9), rgba(10, 10, 10, 0.9));
+  border: 2px solid #ff1a1a;
+  border-radius: 8px;
+  color: #fff;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  box-shadow: 0 0 15px rgba(255, 26, 26, 0.3);
+}
+
+.successMessage {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: rgba(0, 200, 81, 0.1);
+  border: 1px solid #00C851;
+  border-radius: 8px;
+  color: #00C851;
+  text-align: center;
+  font-weight: 600;
+}
+
+.txLink {
+  display: inline-block;
+  margin-top: 10px;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #fff;
+  padding-bottom: 2px;
+  transition: all 0.2s;
+}
+
+.txLink:hover {
+  color: #00C851;
+  border-color: #00C851;
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 24px;
+    border-radius: 12px;
+  }
+  .cards {
+    flex-direction: column;
+  }
+  .cardTitle {
+    font-size: 2rem;
+  }
+  .input {
+    font-size: 1.25rem;
+  }
+}

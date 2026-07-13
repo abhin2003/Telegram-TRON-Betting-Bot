@@ -1,8 +1,8 @@
 import { Telegraf } from 'telegraf';
 import express from 'express';
 import { config } from './config/env.js';
-import { handleStart } from './handlers/start.handler.js';
-import { startBlockchainListener } from './jobs/blockchainListener.js';
+import { handleStart, handlePrediction, handleAmount } from './handlers/start.handler.js';
+import { evaluateBet } from './jobs/blockchainListener.js';
 import { supabase } from './database/supabase.js';
 
 // Ensure BOT_TOKEN is present
@@ -15,6 +15,8 @@ const bot = new Telegraf(config.botToken || 'DUMMY_TOKEN');
 
 // Register handlers
 bot.start(handleStart);
+bot.action(/^pred_(ODD|EVEN)$/, handlePrediction);
+bot.action(/^amt_(ODD|EVEN)_(\d+)$/, handleAmount);
 
 // Basic Express server
 const app = express();
@@ -25,26 +27,34 @@ app.get('/', (req, res) => {
     res.send('TronFlip Telegram Bot is running!');
 });
 
-// API endpoint for TMA to register user's connected wallet
-app.post('/api/connect-wallet', async (req, res) => {
-    const { telegramId, tronAddress } = req.body;
-    if (!telegramId || !tronAddress) {
-        return res.status(400).json({ error: 'Missing telegramId or tronAddress' });
+// API endpoint for TMA to verify the transaction sent by TronLink
+app.post('/api/verify-bet', async (req, res) => {
+    const { telegramId, txid, prediction, amount, playerAddress } = req.body;
+    
+    if (!telegramId || !txid || !prediction || !amount || !playerAddress) {
+        return res.status(400).json({ error: 'Missing required parameters' });
     }
 
-    try {
-        // Upsert user to map telegram_id to tron_address
-        const { error } = await supabase.from('users').upsert({
-            telegram_id: telegramId.toString(),
-            tron_address: tronAddress,
-            // the rest can be null since it's non-custodial
-        }, { onConflict: 'telegram_id' });
+    // Acknowledge to frontend immediately so it can close
+    res.json({ success: true, message: 'Transaction received, verifying on chain...' });
 
-        if (error) throw error;
-        res.json({ success: true, message: 'Wallet linked to Telegram account' });
+    // Send a message to the user that we are verifying
+    try {
+        await bot.telegram.sendMessage(telegramId, `⏳ **Verifying Transaction...**\n\nTXID: \`${txid}\`\n\nPlease wait for block confirmation...`, { parse_mode: 'Markdown' });
     } catch (err) {
-        console.error('Wallet connect error:', err.message);
-        res.status(500).json({ error: 'Failed to link wallet' });
+        console.error('Failed to send verification message:', err);
+    }
+
+    // Process the bet asynchronously
+    try {
+        // Evaluate the bet manually by calling evaluateBet or a dedicated verifier.
+        // For simplicity, we just pass this into our blockchainListener logic.
+        await evaluateBet(txid, playerAddress, amount, prediction, telegramId, bot.telegram);
+    } catch (err) {
+        console.error('Error processing verified bet:', err);
+        try {
+            await bot.telegram.sendMessage(telegramId, `❌ Error processing bet. If your TRX was sent, please contact support.`);
+        } catch (e) {}
     }
 });
 
@@ -52,8 +62,8 @@ app.listen(PORT, () => {
     console.log(`Health check and API server listening on port ${PORT}`);
 });
 
-// Start background blockchain listener
-startBlockchainListener();
+// We disable the global blockchain listener since we now verify specific txids via API
+// startBlockchainListener();
 
 // Launch bot
 if (config.botToken) {

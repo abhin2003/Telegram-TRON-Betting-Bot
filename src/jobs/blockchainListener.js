@@ -1,20 +1,11 @@
 import axios from 'axios';
-import { supabase } from '../database/supabase.js';
 import { config } from '../config/env.js';
-import { Telegraf } from 'telegraf';
 import { TronWeb } from 'tronweb';
-import cron from 'node-cron';
-
-// Safely initialize bot for notifications
-let bot;
-if (config.botToken && config.botToken !== 'dummy_telegram_bot_token_for_dev') {
-    bot = new Telegraf(config.botToken);
-}
 
 // Admin wallet for payouts
 const adminTronWeb = new TronWeb({
     fullHost: config.tronRpc || 'https://api.shasta.trongrid.io',
-    privateKey: process.env.VITE_MAIN_PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000001' // fallback
+    privateKey: process.env.VITE_MAIN_PRIVATE_KEY || '0000000000000000000000000000000000000000000000000000000000000001'
 });
 
 function judge(blockNumber) {
@@ -25,104 +16,74 @@ function judge(blockNumber) {
     };
 }
 
-let isProcessing = false;
-
-export async function checkNewBets() {
-    if (isProcessing) return;
-    isProcessing = true;
-    
+export async function evaluateBet(txid, playerAddress, amountTrx, prediction, telegramId, telegramBot) {
     try {
-        if (!config.mainAddress) {
-            console.warn('VITE_MAIN_ADDRESS is missing. Cannot listen for bets.');
+        let attempts = 0;
+        let tx = null;
+        let txInfo = null;
+        
+        // Poll for transaction confirmation
+        while (attempts < 15) {
+            try {
+                tx = await adminTronWeb.trx.getTransaction(txid);
+                txInfo = await adminTronWeb.trx.getTransactionInfo(txid);
+                if (tx && txInfo && Object.keys(txInfo).length > 0) {
+                    break;
+                }
+            } catch (e) {
+                // Ignore errors while polling
+            }
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            attempts++;
+        }
+
+        if (!tx || !txInfo || Object.keys(txInfo).length === 0) {
+            await telegramBot.sendMessage(telegramId, `❌ **Transaction Not Found**\n\nWe couldn't confirm your transaction on the blockchain. If your TRX was deducted, please contact support.`, { parse_mode: 'Markdown' });
             return;
         }
 
-        const url = `${config.tronRpc}/v1/accounts/${config.mainAddress}/transactions?only_to=true&limit=20`;
-        const response = await axios.get(url);
+        // Verify the transaction was successful on chain
+        if (txInfo.receipt && txInfo.receipt.result !== 'SUCCESS' && txInfo.receipt.result) {
+            await telegramBot.sendMessage(telegramId, `❌ **Transaction Failed**\n\nYour transaction failed on the blockchain.`, { parse_mode: 'Markdown' });
+            return;
+        }
+
+        const blockNumber = txInfo.blockNumber;
+        const { result } = judge(blockNumber);
         
-        if (!response.data || !response.data.data) return;
+        // Normalize prediction
+        const normalizedPrediction = prediction.toUpperCase();
+        const isWin = normalizedPrediction === result;
+        
+        let payoutTrx = 0;
+        let payoutTxid = null;
 
-        for (const tx of response.data.data) {
-            const txid = tx.txID;
+        if (isWin) {
+            payoutTrx = amountTrx * 1.8; // PAYOUT_MULTIPLIER
+            const payoutSun = Math.floor(payoutTrx * 1_000_000);
             
-            // Check if processed
-            const { data: existingBet } = await supabase.from('bets').select('id').eq('id', txid).single();
-            if (existingBet) continue;
-
-            // Only process TRX transfers
-            if (!tx.raw_data || !tx.raw_data.contract || tx.raw_data.contract[0].type !== "TransferContract") continue;
-
-            const contract = tx.raw_data.contract[0].parameter.value;
-            
-            // Check memo for ODD or EVEN
-            if (!tx.raw_data.data) continue;
-            
-            const memoText = Buffer.from(tx.raw_data.data, 'hex').toString('utf8').trim().toUpperCase();
-            if (memoText !== 'ODD' && memoText !== 'EVEN') continue;
-
-            // Validate amounts
-            const amountSun = contract.amount;
-            const amountTrx = amountSun / 1_000_000;
-            if (amountTrx < 10) continue; // MIN_BET_TRX
-
-            const playerAddressHex = contract.owner_address;
-            const playerAddress = adminTronWeb.address.fromHex(playerAddressHex);
-            
-            const blockNumber = tx.blockNumber;
-            const { result } = judge(blockNumber);
-            const isWin = memoText === result;
-            
-            let payoutTrx = 0;
-            if (isWin) {
-                payoutTrx = amountTrx * 1.8; // PAYOUT_MULTIPLIER
-                const payoutSun = Math.floor(payoutTrx * 1_000_000);
-                
-                try {
-                    const payoutTx = await adminTronWeb.transactionBuilder.sendTrx(playerAddress, payoutSun, config.mainAddress);
-                    const signed = await adminTronWeb.trx.sign(payoutTx);
-                    await adminTronWeb.trx.sendRawTransaction(signed);
+            try {
+                const payoutTx = await adminTronWeb.transactionBuilder.sendTrx(playerAddress, payoutSun, config.mainAddress);
+                const signed = await adminTronWeb.trx.sign(payoutTx);
+                const broadcast = await adminTronWeb.trx.sendRawTransaction(signed);
+                if (broadcast.result) {
+                    payoutTxid = broadcast.transaction.txID;
                     console.log(`[Payout Success] ${payoutTrx} TRX sent to ${playerAddress}`);
-                } catch (e) {
-                    console.error("[Payout Error] Failed to send TRX:", e.message);
                 }
-            }
-
-            // Save to Supabase
-            await supabase.from('bets').insert({
-                id: txid,
-                player: playerAddress,
-                prediction: memoText,
-                amount: amountTrx,
-                asset: 'TRX',
-                block: blockNumber,
-                result: result,
-                payout: payoutTrx
-            });
-            
-            // Send Telegram Notification
-            if (bot) {
-                const { data: user } = await supabase.from('users').select('telegram_id').eq('tron_address', playerAddress).single();
-                if (user && user.telegram_id) {
-                    const message = isWin 
-                        ? `🎉 *You WON!*\nYour bet of ${amountTrx} TRX on ${memoText} was successful.\nPayout: ${payoutTrx} TRX has been sent to your wallet!` 
-                        : `😢 *You LOST!*\nYour bet of ${amountTrx} TRX on ${memoText} didn't match the block hash. Better luck next time!`;
-                    try {
-                        await bot.telegram.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown' });
-                    } catch (err) {
-                        console.error("Failed to notify user:", user.telegram_id);
-                    }
-                }
+            } catch (e) {
+                console.error("[Payout Error] Failed to send TRX:", e.message);
+                await telegramBot.sendMessage(telegramId, `⚠️ **Payout Delayed**\n\nYou won, but our automatic payout failed. An admin will process it manually.`, { parse_mode: 'Markdown' });
             }
         }
-    } catch (error) {
-        console.error("Error processing blockchain listener:", error.message);
-    } finally {
-        isProcessing = false;
-    }
-}
 
-// Start polling every 5 seconds
-export function startBlockchainListener() {
-    cron.schedule('*/5 * * * * *', checkNewBets);
-    console.log("Blockchain listener started.");
+        const message = isWin 
+            ? `🎉 **You WON!**\n\nYour bet of **${amountTrx} TRX** on **${normalizedPrediction}** was successful!\n\nBlock Number: \`${blockNumber}\`\nBlock Result: **${result}**\n\nPayout of **${payoutTrx.toFixed(2)} TRX** has been sent to your wallet!${payoutTxid ? `\n[View Payout](https://shasta.tronscan.org/#/transaction/${payoutTxid})` : ''}` 
+            : `😢 **You LOST!**\n\nYour bet of **${amountTrx} TRX** on **${normalizedPrediction}** didn't match.\n\nBlock Number: \`${blockNumber}\`\nBlock Result: **${result}**\n\nBetter luck next time!`;
+            
+        await telegramBot.sendMessage(telegramId, message, { parse_mode: 'Markdown', disable_web_page_preview: true });
+
+    } catch (error) {
+        console.error("Error in evaluateBet:", error);
+        await telegramBot.sendMessage(telegramId, `❌ **Error Processing Bet**\n\nAn unexpected error occurred while processing your bet. Please contact support.`, { parse_mode: 'Markdown' });
+    }
 }

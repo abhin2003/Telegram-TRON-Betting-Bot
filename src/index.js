@@ -1,7 +1,7 @@
 import { Telegraf } from 'telegraf';
 import express from 'express';
 import { config } from './config/env.js';
-import { handleStart, handlePrediction, handleAmount } from './handlers/start.handler.js';
+import { handleStart, handlePrediction, handleAmount, handleManualAmount, handleText } from './handlers/start.handler.js';
 import { evaluateBet } from './jobs/blockchainListener.js';
 import { supabase } from './database/supabase.js';
 
@@ -17,6 +17,8 @@ const bot = new Telegraf(config.botToken || 'DUMMY_TOKEN');
 bot.start(handleStart);
 bot.action(/^pred_(ODD|EVEN)$/, handlePrediction);
 bot.action(/^amt_(ODD|EVEN)_(\d+)$/, handleAmount);
+bot.action(/^manual_(ODD|EVEN)$/, handleManualAmount);
+bot.on('text', handleText);
 
 // Basic Express server
 const app = express();

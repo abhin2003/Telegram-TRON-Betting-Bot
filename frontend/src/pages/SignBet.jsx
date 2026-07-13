@@ -20,25 +20,40 @@ const SignBet = () => {
     }
   }, []);
 
-  const handleSign = async () => {
+  const handleConnectAndSign = async () => {
     try {
-      setStatus('signing');
       setError(null);
+      
+      // Step 1: Ensure wallet is connected
+      let currentAddress = window.tronWeb?.defaultAddress?.base58;
+      
+      if (!currentAddress) {
+        setStatus('connecting');
+        // Await connection
+        await connectWallet();
+        
+        // Wait a brief moment for tronWeb to inject and initialize the address
+        await new Promise(resolve => setTimeout(resolve, 500));
+        currentAddress = window.tronWeb?.defaultAddress?.base58;
+        
+        if (!currentAddress) {
+          throw new Error('Please unlock your TronLink wallet and approve the connection.');
+        }
+      }
+
+      // Step 2: Sign the transaction
+      setStatus('signing');
       
       const amountTrx = parseFloat(params.amount);
       const amountSun = Math.floor(amountTrx * 1_000_000);
       const toAddress = import.meta.env.VITE_MAIN_ADDRESS;
       const memoText = params.prediction.toUpperCase();
 
-      if (!window.tronWeb || !window.tronWeb.defaultAddress.base58) {
-        throw new Error('TronLink is not ready.');
-      }
-
       // Build transaction
       const unSignedTxn = await window.tronWeb.transactionBuilder.sendTrx(
         toAddress, 
         amountSun, 
-        window.tronWeb.defaultAddress.base58
+        currentAddress
       );
       
       // Add memo (ODD/EVEN)
@@ -70,7 +85,7 @@ const SignBet = () => {
             txid,
             prediction: params.prediction,
             amount: params.amount,
-            playerAddress: window.tronWeb.defaultAddress.base58
+            playerAddress: currentAddress
           })
         });
       } catch (e) {
@@ -108,41 +123,38 @@ const SignBet = () => {
           <p style={{ margin: '0', fontSize: '18px' }}>Prediction: <strong style={{ color: params.prediction === 'ODD' ? '#ff00ff' : '#00aaff' }}>{params.prediction}</strong></p>
         </div>
 
-        {!isConnected ? (
-          <button 
-            onClick={connectWallet}
-            style={{ width: '100%', padding: '16px', background: '#ff0055', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
-          >
-            Connect TronLink
-          </button>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <p style={{ margin: 0, fontSize: '14px', color: '#a9b1d6' }}>Connected: {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}</p>
-            
-            {status === 'idle' || status === 'error' ? (
-              <button 
-                onClick={handleSign}
-                style={{ width: '100%', padding: '16px', background: '#00ffaa', color: '#000', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                Sign Transaction
-              </button>
-            ) : status === 'signing' ? (
-              <button disabled style={{ width: '100%', padding: '16px', background: '#555', color: '#ccc', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold' }}>
-                Waiting for signature...
-              </button>
-            ) : status === 'verifying' ? (
-              <button disabled style={{ width: '100%', padding: '16px', background: '#555', color: '#ccc', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold' }}>
-                Sending...
-              </button>
-            ) : (
-              <button disabled style={{ width: '100%', padding: '16px', background: '#44ff44', color: '#000', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold' }}>
-                Success! You can close this.
-              </button>
-            )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          {isConnected && walletAddress && (
+             <p style={{ margin: 0, fontSize: '14px', color: '#a9b1d6' }}>Connected: {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}</p>
+          )}
+          
+          {(status === 'idle' || status === 'error') ? (
+            <button 
+              onClick={handleConnectAndSign}
+              style={{ width: '100%', padding: '16px', background: '#ff0055', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              {!isConnected ? 'Connect Wallet & Sign' : 'Sign Transaction'}
+            </button>
+          ) : status === 'connecting' ? (
+            <button disabled style={{ width: '100%', padding: '16px', background: '#555', color: '#ccc', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold' }}>
+              Connecting...
+            </button>
+          ) : status === 'signing' ? (
+            <button disabled style={{ width: '100%', padding: '16px', background: '#555', color: '#ccc', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold' }}>
+              Waiting for signature...
+            </button>
+          ) : status === 'verifying' ? (
+            <button disabled style={{ width: '100%', padding: '16px', background: '#555', color: '#ccc', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold' }}>
+              Sending...
+            </button>
+          ) : (
+            <button disabled style={{ width: '100%', padding: '16px', background: '#44ff44', color: '#000', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold' }}>
+              Success! You can close this.
+            </button>
+          )}
 
-            {error && <p style={{ color: '#ff4444', fontSize: '14px', margin: 0 }}>{error}</p>}
-          </div>
-        )}
+          {error && <p style={{ color: '#ff4444', fontSize: '14px', margin: 0 }}>{error}</p>}
+        </div>
       </div>
     </div>
   );

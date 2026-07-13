@@ -50,7 +50,14 @@ const SignBet = () => {
       const tgId = params.tg_id || '';
       const memoText = `${params.prediction.toUpperCase()}|${tgId}`;
 
-      // Build transaction
+      // Use a dedicated RPC to avoid TronLink's unreliable testnet nodes
+      const TronWeb = window.TronWeb || window.tronWeb.constructor; 
+      // Fortunately TronLink injects window.tronWeb which we can use to get the constructor
+      // Or we can just use fetch to interact with TronGrid API directly if TronWeb constructor isn't available.
+      // But actually, window.tronWeb has fullHost. We can just override it or use it carefully.
+      // Let's just create a new instance if we can, or just use fetch for broadcast to be 100% sure.
+      
+      // Build transaction using window.tronWeb (which is usually fine for building, the broadcast is the issue)
       const unSignedTxn = await window.tronWeb.transactionBuilder.sendTrx(
         toAddress, 
         amountSun, 
@@ -63,14 +70,20 @@ const SignBet = () => {
       // Request signature from TronLink
       const signedTxn = await window.tronWeb.trx.sign(unSignedTxnWithNote);
       
-      // Broadcast
-      const receipt = await window.tronWeb.trx.sendRawTransaction(signedTxn);
+      // Broadcast using direct fetch to TronGrid to guarantee it reaches the real network
+      const broadcastRes = await fetch('https://api.shasta.trongrid.io/wallet/broadcasttransaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(signedTxn)
+      });
+      const receipt = await broadcastRes.json();
       
       if (!receipt.result) {
-        throw new Error('Transaction failed to broadcast');
+        console.error("Broadcast failed:", receipt);
+        throw new Error(receipt.message ? (typeof receipt.message === 'string' ? receipt.message : Buffer.from(receipt.message, 'hex').toString()) : 'Transaction failed to broadcast');
       }
 
-      const txid = receipt.transaction.txID;
+      const txid = receipt.txid || signedTxn.txID;
       setStatus('verifying');
 
       // Send to backend

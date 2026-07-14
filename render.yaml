@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: telegram-tron-betting-bot
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: VITE_MAIN_PRIVATE_KEY
+        sync: false
+      - key: VITE_MAIN_ADDRESS
+        sync: false
+      - key: VITE_TRON_RPC
+        sync: false
+      - key: VITE_USDT_ADDRESS
+        sync: false
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: BOT_TOKEN
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: WEB_APP_URL
+        sync: false
